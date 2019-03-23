@@ -63,7 +63,7 @@ func main() {
 		}
 
 		files = append(files, &plugin.CodeGeneratorResponse_File{
-			Name:    strptr(tsfilename(*pfile.Name)),
+			Name:    strptr(tsFileName(*pfile.Name)),
 			Content: strptr(strings.TrimSpace(strings.Join(defs, "\n\n"))),
 		})
 	}
@@ -81,9 +81,13 @@ func strptr(str string) *string {
 	return &str
 }
 
-// tsfilename generates a TypeScript definitions file name using a protobuf
+func isRepeated(f *descriptor.FieldDescriptorProto) bool {
+	return f.Label != nil && *f.Label == descriptor.FieldDescriptorProto_LABEL_REPEATED
+}
+
+// tsFileName generates a TypeScript definitions file name using a protobuf
 // file name.
-func tsfilename(protofilename string) string {
+func tsFileName(protofilename string) string {
 	var fullpath string
 	subpath := strings.SplitN(protofilename, "/", 2)
 	if len(subpath) > 1 {
@@ -94,9 +98,9 @@ func tsfilename(protofilename string) string {
 	return strings.Replace(fullpath, ".proto", ".d.ts", 1)
 }
 
-// locate searches for a message type (eg .log.Log.DataEntry) in a proto
+// locateMessage searches for a message type (eg .log.Log.DataEntry) in a proto
 // request, looking at top-level message and nested messages as well.
-func locate(typName string, req *plugin.CodeGeneratorRequest) *descriptor.DescriptorProto {
+func locateMessage(typName string, req *plugin.CodeGeneratorRequest) *descriptor.DescriptorProto {
 	parts := strings.Split(typName, ".")
 	nested := len(parts) > 3
 
@@ -128,11 +132,11 @@ func def(name, body string) string {
 	return fmt.Sprintf("export type %s = %s", name, body)
 }
 
-func tstyp(indent int, f *descriptor.FieldDescriptorProto, desc *descriptor.DescriptorProto, req *plugin.CodeGeneratorRequest) (typ string, msg string) {
+func tsType(indent int, f *descriptor.FieldDescriptorProto, desc *descriptor.DescriptorProto, req *plugin.CodeGeneratorRequest) (typ string, msg string) {
 	var ok bool
 
 	if *f.Type == descriptor.FieldDescriptorProto_TYPE_MESSAGE && f.TypeName != nil {
-		lookup := locate(*f.TypeName, req)
+		lookup := locateMessage(*f.TypeName, req)
 		if lookup != nil {
 			typ = obj(indent, lookup.Field, lookup, req)
 		} else {
@@ -148,12 +152,16 @@ func tstyp(indent int, f *descriptor.FieldDescriptorProto, desc *descriptor.Desc
 		typ = typmap[*f.Type]
 	}
 
+	if isRepeated(f) {
+		typ = "[]" + typ
+	}
+
 	return typ, msg
 }
 
 // field generates a TypeScript object field type using a field descriptor.
 func field(indent int, f *descriptor.FieldDescriptorProto, desc *descriptor.DescriptorProto, req *plugin.CodeGeneratorRequest) string {
-	typ, msg := tstyp(indent, f, desc, req)
+	typ, msg := tsType(indent, f, desc, req)
 	if msg != "" {
 		msg = "// " + msg
 	}
@@ -165,8 +173,8 @@ func field(indent int, f *descriptor.FieldDescriptorProto, desc *descriptor.Desc
 // obj will generate a TypeScript object structure.
 func obj(indent int, fields []*descriptor.FieldDescriptorProto, desc *descriptor.DescriptorProto, req *plugin.CodeGeneratorRequest) string {
 	if desc.Options != nil && desc.Options.MapEntry != nil && *desc.Options.MapEntry {
-		ktyp, kmsg := tstyp(indent+1, desc.Field[0], desc, req)
-		vtyp, vmsg := tstyp(indent+1, desc.Field[1], desc, req)
+		ktyp, kmsg := tsType(indent+1, desc.Field[0], desc, req)
+		vtyp, vmsg := tsType(indent+1, desc.Field[1], desc, req)
 
 		var comment string
 		if kmsg != "" || vmsg != "" {
