@@ -10,3 +10,13 @@ message Person {
 message PeopleById {
   map<string, Person> by_id = 1;
 }
+
+message NestedPeople {
+  Person person1 = 1;
+  Person person2 = 2;
+  PeopleById by_id = 3;
+}
+
+message NestedPeopleMap {
+  map<string, NestedPeople> by_id = 1;
+}

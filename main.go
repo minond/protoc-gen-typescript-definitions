@@ -146,8 +146,8 @@ func tsType(indent int, f *descriptor.FieldDescriptorProto, desc *descriptor.Des
 
 		if lookup.Options != nil && lookup.Options.MapEntry != nil && *lookup.Options.MapEntry {
 			isMap = true
-			ktyp, kmsg := tsType(indent+1, lookup.Field[0], lookup, req)
-			vtyp, vmsg := tsType(indent+1, lookup.Field[1], lookup, req)
+			ktyp, kmsg := tsType(indent, lookup.Field[0], lookup, req)
+			vtyp, vmsg := tsType(indent, lookup.Field[1], lookup, req)
 
 			var comment string
 			if kmsg != "" || vmsg != "" {
