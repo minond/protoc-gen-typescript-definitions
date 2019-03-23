@@ -57,7 +57,7 @@ func main() {
 
 	for _, pfile := range req.ProtoFile {
 		for _, message := range pfile.MessageType {
-			defs = append(defs, def(*message.Name, obj(message.Field, message, req)))
+			defs = append(defs, def(*message.Name, obj(0, message.Field, message, req)))
 		}
 	}
 
@@ -117,13 +117,13 @@ func def(name, body string) string {
 	return fmt.Sprintf("export type %s = %s", name, body)
 }
 
-func tstyp(f *descriptor.FieldDescriptorProto, desc *descriptor.DescriptorProto, req *plugin.CodeGeneratorRequest) (typ string, msg string) {
+func tstyp(indent int, f *descriptor.FieldDescriptorProto, desc *descriptor.DescriptorProto, req *plugin.CodeGeneratorRequest) (typ string, msg string) {
 	var ok bool
 
 	if *f.Type == descriptor.FieldDescriptorProto_TYPE_MESSAGE && f.TypeName != nil {
 		lookup := locate(*f.TypeName, req)
 		if lookup != nil {
-			typ = obj(lookup.Field, lookup, req)
+			typ = obj(indent, lookup.Field, lookup, req)
 		} else {
 			msg = fmt.Sprintf("FIXME unable to locate definition for %s", *f.TypeName)
 			typ = "undefined"
@@ -141,19 +141,21 @@ func tstyp(f *descriptor.FieldDescriptorProto, desc *descriptor.DescriptorProto,
 }
 
 // field generates a TypeScript object field type using a field descriptor.
-func field(f *descriptor.FieldDescriptorProto, desc *descriptor.DescriptorProto, req *plugin.CodeGeneratorRequest) string {
-	typ, msg := tstyp(f, desc, req)
+func field(indent int, f *descriptor.FieldDescriptorProto, desc *descriptor.DescriptorProto, req *plugin.CodeGeneratorRequest) string {
+	typ, msg := tstyp(indent, f, desc, req)
 	if msg != "" {
 		msg = "// " + msg
 	}
-	return strings.TrimSuffix(fmt.Sprintf("  %s: %s %s", *f.Name, typ, msg), " ")
+
+	indentation := strings.Repeat("  ", indent)
+	return strings.TrimSuffix(fmt.Sprintf("%s%s: %s %s", indentation, *f.Name, typ, msg), " ")
 }
 
 // obj will generate a TypeScript object structure.
-func obj(fields []*descriptor.FieldDescriptorProto, desc *descriptor.DescriptorProto, req *plugin.CodeGeneratorRequest) string {
+func obj(indent int, fields []*descriptor.FieldDescriptorProto, desc *descriptor.DescriptorProto, req *plugin.CodeGeneratorRequest) string {
 	if desc.Options != nil && desc.Options.MapEntry != nil && *desc.Options.MapEntry {
-		ktyp, kmsg := tstyp(desc.Field[0], desc, req)
-		vtyp, vmsg := tstyp(desc.Field[1], desc, req)
+		ktyp, kmsg := tstyp(indent+1, desc.Field[0], desc, req)
+		vtyp, vmsg := tstyp(indent+1, desc.Field[1], desc, req)
 
 		var comment string
 		if kmsg != "" || vmsg != "" {
@@ -165,8 +167,9 @@ func obj(fields []*descriptor.FieldDescriptorProto, desc *descriptor.DescriptorP
 
 	defs := make([]string, len(fields))
 	for i, f := range fields {
-		defs[i] = field(f, desc, req)
+		defs[i] = field(indent+1, f, desc, req)
 	}
 
-	return fmt.Sprintf("{\n%s\n}", strings.Join(defs, "\n"))
+	indentation := strings.Repeat("  ", indent)
+	return fmt.Sprintf("{\n%s\n%s}", strings.Join(defs, "\n"), indentation)
 }
