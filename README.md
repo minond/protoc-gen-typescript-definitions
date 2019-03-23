@@ -9,23 +9,67 @@ definition below it:
 ```proto
 syntax = "proto3";
 
-message User {
-  string guid             = 1;
-  string name             = 2;
-  int age                 = 3;
-  int64 dob               = 4;
-  map<string, int> scores = 5;
+package log;
+
+message Log {
+  string guid              = 1;
+  string text              = 2;
+  map<string, string> data = 3;
+  int64 createdOn          = 4;
+  string createdBy         = 5;
+  int64 updatedOn          = 6;
+  string updatedBy         = 7;
+  int64 deletedOn          = 8;
+  string deletedBy         = 9;
+}
+
+message LogCreateRequest {
+  string id       = 1;
+  string text     = 2;
+  int64 createdOn = 3;
+  int64 updatedOn = 4;
+}
+
+message LogCreateResponse {
+  string id = 1;
+  Log log   = 2;
 }
 ```
 
 **user.d.ts**
 
 ```typescript
-type User = {
+export type Log = {
   guid: string
-  name: string
-  age: number
-  dob: number
-  scores: Dictionary<string, number>
+  text: string
+  data: Dictionary<string, string>
+  createdOn: number
+  createdBy: string
+  updatedOn: number
+  updatedBy: string
+  deletedOn: number
+  deletedBy: string
+}
+
+export type LogCreateRequest = {
+  id: string
+  text: string
+  createdOn: number
+  updatedOn: number
+}
+
+export type LogCreateResponse = {
+  id: string
+  log: {
+    guid: string
+    text: string
+    data: Dictionary<string, string>
+    createdOn: number
+    createdBy: string
+    updatedOn: number
+    updatedBy: string
+    deletedOn: number
+    deletedBy: string
+  }
 }
 ```
