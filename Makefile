@@ -5,5 +5,5 @@ test:
 	protoc --typescript-definitions_out=test/results/ -I test/definitions/ test/definitions/*.proto
 	diff test/results/ test/expected/
 
-testregen:
+gen:
 	protoc --typescript-definitions_out=test/expected/ -I test/definitions/ test/definitions/*.proto
