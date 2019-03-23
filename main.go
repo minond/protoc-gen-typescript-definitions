@@ -159,7 +159,7 @@ func field(indent int, f *descriptor.FieldDescriptorProto, desc *descriptor.Desc
 	}
 
 	indentation := strings.Repeat("  ", indent)
-	return strings.TrimSuffix(fmt.Sprintf("%s%s: %s %s", indentation, *f.Name, typ, msg), " ")
+	return strings.TrimSuffix(fmt.Sprintf("%s%s?: %s %s", indentation, *f.Name, typ, msg), " ")
 }
 
 // obj will generate a TypeScript object structure.
