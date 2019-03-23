@@ -168,7 +168,7 @@ func tsType(indent int, f *descriptor.FieldDescriptorProto, desc *descriptor.Des
 	}
 
 	if !isMap && isRepeated(f) {
-		typ = "[]" + typ
+		typ = typ + "[]"
 	}
 
 	return typ, msg

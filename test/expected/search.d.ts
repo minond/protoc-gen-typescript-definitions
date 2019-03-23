@@ -6,9 +6,9 @@ export type SearchRequest = {
 }
 
 export type SearchResponse = {
-  results?: []{
+  results?: {
     url?: string
     title?: string
-    snippets?: []string
-  }
+    snippets?: string[]
+  }[]
 }
