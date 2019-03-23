@@ -173,7 +173,7 @@ func obj(indent int, fields []*descriptor.FieldDescriptorProto, desc *descriptor
 			comment = "// " + strings.TrimSpace(kmsg+" "+vmsg)
 		}
 
-		return strings.TrimSpace(fmt.Sprintf("Dictionary<%s, %s> %s", ktyp, vtyp, comment))
+		return strings.TrimSpace(fmt.Sprintf("Map<%s, %s> %s", ktyp, vtyp, comment))
 	}
 
 	defs := make([]string, len(fields))

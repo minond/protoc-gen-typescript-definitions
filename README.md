@@ -40,7 +40,7 @@ message LogCreateResponse {
 export type Log = {
   guid: string
   text: string
-  data: Dictionary<string, string>
+  data: Map<string, string>
   createdOn: number
   createdBy: string
   updatedOn: number
@@ -61,7 +61,7 @@ export type LogCreateResponse = {
   log: {
     guid: string
     text: string
-    data: Dictionary<string, string>
+    data: Map<string, string>
     createdOn: number
     createdBy: string
     updatedOn: number
