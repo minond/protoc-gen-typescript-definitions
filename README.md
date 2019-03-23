@@ -1,6 +1,8 @@
 `protoc-gen-typescript-definitions` is a Protocol Buffers compiler plugin that
-generates TypeScript type definitions for messages. Given the following
-protobuf file on the left you will get the type definitions on the right:
+generates TypeScript type definitions for messages. No encoding/decoding code
+is generated, this will only generate the type declarations for messages. For
+example, given the protobuf file on the left you will get the type definitions
+on the right:
 
 <table>
 <tr>
