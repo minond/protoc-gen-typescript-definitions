@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package search;
+
+message SearchResponse {
+  message Result {
+    string url = 1;
+    string title = 2;
+    repeated string snippets = 3;
+  }
+  repeated Result results = 1;
+}
