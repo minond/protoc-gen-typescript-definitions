@@ -1,2 +1,3 @@
 - Handle package-less lookups
+- Handle arbitrarily deep lookups
 - Genereate enums
