@@ -83,6 +83,8 @@ func strptr(str string) *string {
 	return &str
 }
 
+// locate searches for a message type (eg .log.Log.DataEntry) in a proto
+// request, looking at top-level message and nested messages as well.
 func locate(typName string, req *plugin.CodeGeneratorRequest) *descriptor.DescriptorProto {
 	parts := strings.Split(typName, ".")
 	nested := len(parts) > 3
@@ -110,10 +112,12 @@ func locate(typName string, req *plugin.CodeGeneratorRequest) *descriptor.Descri
 	return nil
 }
 
-// field generates a TypeScript object field type using a field descriptor.
-func field(f *descriptor.FieldDescriptorProto, desc *descriptor.DescriptorProto, req *plugin.CodeGeneratorRequest) string {
-	var msg string
-	var typ string
+// def will generate an exported TypeScript type declaration.
+func def(name, body string) string {
+	return fmt.Sprintf("export type %s = %s", name, body)
+}
+
+func tstyp(f *descriptor.FieldDescriptorProto, desc *descriptor.DescriptorProto, req *plugin.CodeGeneratorRequest) (typ string, msg string) {
 	var ok bool
 
 	if *f.Type == descriptor.FieldDescriptorProto_TYPE_MESSAGE && f.TypeName != nil {
@@ -121,28 +125,44 @@ func field(f *descriptor.FieldDescriptorProto, desc *descriptor.DescriptorProto,
 		if lookup != nil {
 			typ = obj(lookup.Field, lookup, req)
 		} else {
-			msg = fmt.Sprintf("// FIXME unable to locate definition for %s", *f.TypeName)
+			msg = fmt.Sprintf("FIXME unable to locate definition for %s", *f.TypeName)
 			typ = "undefined"
 		}
 	} else if *f.Type == descriptor.FieldDescriptorProto_TYPE_MESSAGE {
-		msg = fmt.Sprintf("// FIXME missing type name for %s", *f.Name)
+		msg = fmt.Sprintf("FIXME missing type name for %s", *f.Name)
 		typ = "undefined"
 	} else if _, ok = typmap[*f.Type]; !ok {
-		msg = fmt.Sprintf("// FIXME unknown protobuf type: %v", f.Type)
+		msg = fmt.Sprintf("FIXME unknown protobuf type: %v", f.Type)
 	} else {
 		typ = typmap[*f.Type]
 	}
 
-	return strings.TrimSuffix(fmt.Sprintf("  %s: %s %s", *f.Name, typ, msg), " ")
+	return typ, msg
 }
 
-// def will generate an exported TypeScript type declaration.
-func def(name, body string) string {
-	return fmt.Sprintf("export type %s = %s", name, body)
+// field generates a TypeScript object field type using a field descriptor.
+func field(f *descriptor.FieldDescriptorProto, desc *descriptor.DescriptorProto, req *plugin.CodeGeneratorRequest) string {
+	typ, msg := tstyp(f, desc, req)
+	if msg != "" {
+		msg = "// " + msg
+	}
+	return strings.TrimSuffix(fmt.Sprintf("  %s: %s %s", *f.Name, typ, msg), " ")
 }
 
 // obj will generate a TypeScript object structure.
 func obj(fields []*descriptor.FieldDescriptorProto, desc *descriptor.DescriptorProto, req *plugin.CodeGeneratorRequest) string {
+	if desc.Options != nil && desc.Options.MapEntry != nil && *desc.Options.MapEntry {
+		ktyp, kmsg := tstyp(desc.Field[0], desc, req)
+		vtyp, vmsg := tstyp(desc.Field[1], desc, req)
+
+		var comment string
+		if kmsg != "" || vmsg != "" {
+			comment = "// " + strings.TrimSpace(kmsg+" "+vmsg)
+		}
+
+		return strings.TrimSpace(fmt.Sprintf("Dictionary<%s, %s> %s", ktyp, vtyp, comment))
+	}
+
 	defs := make([]string, len(fields))
 	for i, f := range fields {
 		defs[i] = field(f, desc, req)
