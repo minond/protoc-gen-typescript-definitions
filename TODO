@@ -1,3 +1,4 @@
 - Handle package-less lookups
 - Handle arbitrarily deep lookups
 - Genereate enums
+- Don't assume proto3, check for optional flag instead of hardcoding it
