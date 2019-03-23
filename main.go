@@ -134,14 +134,29 @@ func def(name, body string) string {
 
 func tsType(indent int, f *descriptor.FieldDescriptorProto, desc *descriptor.DescriptorProto, req *plugin.CodeGeneratorRequest) (typ string, msg string) {
 	var ok bool
+	isMap := false
 
 	if *f.Type == descriptor.FieldDescriptorProto_TYPE_MESSAGE && f.TypeName != nil {
 		lookup := locateMessage(*f.TypeName, req)
-		if lookup != nil {
-			typ = obj(indent, lookup.Field, lookup, req)
-		} else {
+		if lookup == nil {
 			msg = fmt.Sprintf("FIXME unable to locate definition for %s", *f.TypeName)
 			typ = "undefined"
+			return
+		}
+
+		if lookup.Options != nil && lookup.Options.MapEntry != nil && *lookup.Options.MapEntry {
+			isMap = true
+			ktyp, kmsg := tsType(indent+1, lookup.Field[0], lookup, req)
+			vtyp, vmsg := tsType(indent+1, lookup.Field[1], lookup, req)
+
+			var comment string
+			if kmsg != "" || vmsg != "" {
+				comment = "// " + strings.TrimSpace(kmsg+" "+vmsg)
+			}
+
+			typ = strings.TrimSpace(fmt.Sprintf("Map<%s, %s> %s", ktyp, vtyp, comment))
+		} else {
+			typ = obj(indent, lookup.Field, lookup, req)
 		}
 	} else if *f.Type == descriptor.FieldDescriptorProto_TYPE_MESSAGE {
 		msg = fmt.Sprintf("FIXME missing type name for %s", *f.Name)
@@ -152,7 +167,7 @@ func tsType(indent int, f *descriptor.FieldDescriptorProto, desc *descriptor.Des
 		typ = typmap[*f.Type]
 	}
 
-	if isRepeated(f) {
+	if !isMap && isRepeated(f) {
 		typ = "[]" + typ
 	}
 
@@ -172,18 +187,6 @@ func field(indent int, f *descriptor.FieldDescriptorProto, desc *descriptor.Desc
 
 // obj will generate a TypeScript object structure.
 func obj(indent int, fields []*descriptor.FieldDescriptorProto, desc *descriptor.DescriptorProto, req *plugin.CodeGeneratorRequest) string {
-	if desc.Options != nil && desc.Options.MapEntry != nil && *desc.Options.MapEntry {
-		ktyp, kmsg := tsType(indent+1, desc.Field[0], desc, req)
-		vtyp, vmsg := tsType(indent+1, desc.Field[1], desc, req)
-
-		var comment string
-		if kmsg != "" || vmsg != "" {
-			comment = "// " + strings.TrimSpace(kmsg+" "+vmsg)
-		}
-
-		return strings.TrimSpace(fmt.Sprintf("Map<%s, %s> %s", ktyp, vtyp, comment))
-	}
-
 	defs := make([]string, len(fields))
 	for i, f := range fields {
 		defs[i] = field(indent+1, f, desc, req)
