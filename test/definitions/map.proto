@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package map;
+
+message Person {
+  string id = 1;
+  string name = 2;
+}
+
+message PeopleById {
+  map<string, Person> by_id = 1;
+}
