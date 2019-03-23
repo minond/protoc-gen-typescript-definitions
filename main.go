@@ -57,7 +57,7 @@ func main() {
 
 	for _, pfile := range req.ProtoFile {
 		for _, message := range pfile.MessageType {
-			defs = append(defs, def(*message.Name, obj(message.Field)))
+			defs = append(defs, def(*message.Name, obj(message.Field, message, req)))
 		}
 	}
 
@@ -83,14 +83,47 @@ func strptr(str string) *string {
 	return &str
 }
 
+func locate(typName string, req *plugin.CodeGeneratorRequest) *descriptor.DescriptorProto {
+	parts := strings.Split(typName, ".")
+	nested := len(parts) > 3
+
+	for _, pfile := range req.ProtoFile {
+		if *pfile.Package != parts[1] {
+			continue
+		}
+
+		for _, message := range pfile.MessageType {
+			if *message.Name != parts[2] {
+				continue
+			} else if !nested {
+				return message
+			}
+
+			for _, nestedTyp := range message.NestedType {
+				if *nestedTyp.Name == parts[3] {
+					return nestedTyp
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 // field generates a TypeScript object field type using a field descriptor.
-func field(f *descriptor.FieldDescriptorProto) string {
+func field(f *descriptor.FieldDescriptorProto, desc *descriptor.DescriptorProto, req *plugin.CodeGeneratorRequest) string {
 	var msg string
 	var typ string
 	var ok bool
 
 	if *f.Type == descriptor.FieldDescriptorProto_TYPE_MESSAGE && f.TypeName != nil {
-		typ = fmt.Sprintf("any // %s", *f.TypeName)
+		lookup := locate(*f.TypeName, req)
+		if lookup != nil {
+			typ = obj(lookup.Field, lookup, req)
+		} else {
+			msg = fmt.Sprintf("// FIXME unable to locate definition for %s", *f.TypeName)
+			typ = "undefined"
+		}
 	} else if *f.Type == descriptor.FieldDescriptorProto_TYPE_MESSAGE {
 		msg = fmt.Sprintf("// FIXME missing type name for %s", *f.Name)
 		typ = "undefined"
@@ -109,10 +142,10 @@ func def(name, body string) string {
 }
 
 // obj will generate a TypeScript object structure.
-func obj(fields []*descriptor.FieldDescriptorProto) string {
+func obj(fields []*descriptor.FieldDescriptorProto, desc *descriptor.DescriptorProto, req *plugin.CodeGeneratorRequest) string {
 	defs := make([]string, len(fields))
 	for i, f := range fields {
-		defs[i] = field(f)
+		defs[i] = field(f, desc, req)
 	}
 
 	return fmt.Sprintf("{\n%s\n}", strings.Join(defs, "\n"))
