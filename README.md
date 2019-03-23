@@ -2,7 +2,7 @@
 generates TypeScript type definitions for messages. Given the following
 protobuf message you will get a file with the TypeScript definition below it:
 
-**user.proto**
+**definitions/log.proto**
 
 ```proto
 syntax = "proto3";
@@ -34,7 +34,7 @@ message LogCreateResponse {
 }
 ```
 
-**user.d.ts**
+**typings/log.d.ts**
 
 ```typescript
 export type Log = {

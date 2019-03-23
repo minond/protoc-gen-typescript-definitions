@@ -53,24 +53,22 @@ func main() {
 	req := &plugin.CodeGeneratorRequest{}
 	req.Unmarshal(data)
 
-	var defs []string
+	var files []*plugin.CodeGeneratorResponse_File
 
 	for _, pfile := range req.ProtoFile {
+		var defs []string
+
 		for _, message := range pfile.MessageType {
 			defs = append(defs, def(*message.Name, obj(0, message.Field, message, req)))
 		}
+
+		files = append(files, &plugin.CodeGeneratorResponse_File{
+			Name:    strptr(tsfilename(*pfile.Name)),
+			Content: strptr(strings.TrimSpace(strings.Join(defs, "\n\n"))),
+		})
 	}
 
-	// TODO get file name using pfile.Name
-	// TODO generate multiple files
-	file := &plugin.CodeGeneratorResponse_File{
-		Name:    strptr("definitions.d.ts"),
-		Content: strptr(strings.TrimSpace(strings.Join(defs, "\n\n"))),
-	}
-
-	res := &plugin.CodeGeneratorResponse{
-		File: []*plugin.CodeGeneratorResponse_File{file},
-	}
+	res := &plugin.CodeGeneratorResponse{File: files}
 	out, err := proto.Marshal(res)
 	if err != nil {
 		panic(err)
@@ -81,6 +79,19 @@ func main() {
 
 func strptr(str string) *string {
 	return &str
+}
+
+// tsfilename generates a TypeScript definitions file name using a protobuf
+// file name.
+func tsfilename(protofilename string) string {
+	var fullpath string
+	subpath := strings.SplitN(protofilename, "/", 2)
+	if len(subpath) > 1 {
+		fullpath = subpath[1]
+	} else {
+		fullpath = subpath[0]
+	}
+	return strings.Replace(fullpath, ".proto", ".d.ts", 1)
 }
 
 // locate searches for a message type (eg .log.Log.DataEntry) in a proto
