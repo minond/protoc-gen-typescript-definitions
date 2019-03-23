@@ -105,7 +105,7 @@ func locateMessage(typName string, req *plugin.CodeGeneratorRequest) *descriptor
 	nested := len(parts) > 3
 
 	for _, pfile := range req.ProtoFile {
-		if *pfile.Package != parts[1] {
+		if pfile.Package != nil && *pfile.Package != parts[1] {
 			continue
 		}
 
