@@ -64,7 +64,7 @@ func main() {
 
 		files = append(files, &plugin.CodeGeneratorResponse_File{
 			Name:    strptr(tsFileName(*pfile.Name)),
-			Content: strptr(strings.TrimSpace(strings.Join(defs, "\n\n"))),
+			Content: strptr(strings.TrimSpace(strings.Join(defs, "\n\n")) + "\n"),
 		})
 	}
 
@@ -135,6 +135,7 @@ func def(name, body string) string {
 func tsType(indent int, f *descriptor.FieldDescriptorProto, desc *descriptor.DescriptorProto, req *plugin.CodeGeneratorRequest) (typ string, msg string) {
 	var ok bool
 	isMap := false
+	isObj := false
 
 	if *f.Type == descriptor.FieldDescriptorProto_TYPE_MESSAGE && f.TypeName != nil {
 		lookup := locateMessage(*f.TypeName, req)
@@ -156,6 +157,7 @@ func tsType(indent int, f *descriptor.FieldDescriptorProto, desc *descriptor.Des
 
 			typ = strings.TrimSpace(fmt.Sprintf("Map<%s, %s> %s", ktyp, vtyp, comment))
 		} else {
+			isObj = true
 			typ = obj(indent, lookup.Field, lookup, req)
 		}
 	} else if *f.Type == descriptor.FieldDescriptorProto_TYPE_MESSAGE {
@@ -168,7 +170,11 @@ func tsType(indent int, f *descriptor.FieldDescriptorProto, desc *descriptor.Des
 	}
 
 	if !isMap && isRepeated(f) {
-		typ = typ + "[]"
+		if isObj {
+			typ = fmt.Sprintf("Array<%s>", typ)
+		} else {
+			typ = typ + "[]"
+		}
 	}
 
 	return typ, msg
